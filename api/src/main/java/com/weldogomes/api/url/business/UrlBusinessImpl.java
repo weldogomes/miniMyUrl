@@ -1,8 +1,12 @@
 package com.weldogomes.api.url.business;
 
+import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +19,7 @@ import com.weldogomes.api.url.repository.UrlRepository;
 @Service
 public class UrlBusinessImpl implements UrlBusiness{
 
+	private static final int ALIAS_MAX_SIZE = 10;
 	private static final int MAX_ATTEMPTS = 100;
 	
 	@Autowired
@@ -44,6 +49,8 @@ public class UrlBusinessImpl implements UrlBusiness{
 					if(aux != null)
 						throw new UrlBusinessException("Alias já existe.");
 					url.setAlias(urlVO.customAlias());
+				} catch (UrlBusinessException e1) {
+					throw e1;
 				} catch (Exception e) {
 					throw new UrlBusinessException("Erro ao verificar existencia de alias.", e);
 				}
@@ -52,19 +59,12 @@ public class UrlBusinessImpl implements UrlBusiness{
 			create(url);
 
 			return url;
+		} catch (UrlBusinessException e1) {
+			throw e1;
 		} catch (Exception e) {
 			throw new UrlBusinessException("Erro ao salvar URL.", e);
 		}
 		
-	}
-
-	@Override
-	public List<Url> list() throws UrlBusinessException {
-		try {
-			return urlRepository.findAll();
-		} catch (Exception e) {
-			throw new UrlBusinessException("Erro ao listar URLs.", e);
-		}
 	}
 	
 	@Override
@@ -80,29 +80,36 @@ public class UrlBusinessImpl implements UrlBusiness{
 		try {
 			int counter = 0;
 			
-			Integer aliasMaxSize = 0;
-			aliasMaxSize = urlRepository.getAliasSize();
-			
 			String hashAlias = new String();
 			Url auxUrl = new Url();
 			
-			for (; counter < MAX_ATTEMPTS; counter++) {
-				String uuid = UUID.randomUUID().toString().replaceAll("-", "");
-		        String timestamp = Instant.now().toString();
-		        
-		        String uniqueString = uuid + timestamp;
-		        
-		        hashAlias = uniqueString.substring(0, Math.min(uniqueString.length(), aliasMaxSize));
+			while(counter < MAX_ATTEMPTS) {
+				String timestamp = Instant.now().toString();
+
+				SecureRandom random = new SecureRandom();
+				byte[] salt = new byte[16];
+				random.nextBytes(salt);
+				
+				KeySpec spec = new PBEKeySpec(timestamp.toCharArray(), salt, 65536, 128);
+				SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+				
+				byte[] hash = factory.generateSecret(spec).getEncoded();
+				
+		        hashAlias = hash.toString().substring(0, Math.min(hash.toString().length(), ALIAS_MAX_SIZE));
 		        auxUrl = findByAlias(hashAlias);
 		        
 				if(!ApiUtils.isNullOrEmpty(hashAlias) && auxUrl == null)
 					break;
+				
+				counter++;
 			}
 			
-			if(!(counter < MAX_ATTEMPTS))
+			if(counter >= MAX_ATTEMPTS)
 				throw new UrlBusinessException("Tentativas de geração de alias esgotadas.");
 			
 			return hashAlias;
+		} catch (UrlBusinessException e1) {
+			throw e1;
 		} catch (Exception e) {
 			throw new UrlBusinessException("Erro ao gerar alias.", e);
 		}
@@ -123,8 +130,10 @@ public class UrlBusinessImpl implements UrlBusiness{
 			Url url = new Url();
 			url = findByAlias(alias);
 			if(url == null)
-				throw new UrlBusinessException("Alias invalido.");
+				throw new UrlBusinessException("Alias não encontrado.");
 			return url.getOriginalUrl();
+		} catch (UrlBusinessException e1) {
+			throw e1;
 		} catch (Exception e) {
 			throw new UrlBusinessException("Erro ao procurar URL original pelo alias.", e);
 		}

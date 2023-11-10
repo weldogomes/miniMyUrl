@@ -19,9 +19,4 @@ public interface UrlRepository extends JpaRepository<Url, Long>	{
 	public List<String> listTop10();
 	
 	public Url findByAlias(String alias);
-	
-	@Query(value = "SELECT CHARACTER_MAXIMUM_LENGTH " +
-			"FROM INFORMATION_SCHEMA.COLUMNS " +
-			"WHERE TABLE_NAME = 'URL' AND COLUMN_NAME = 'ALIAS'", nativeQuery = true)
-	public Integer getAliasSize();
 }

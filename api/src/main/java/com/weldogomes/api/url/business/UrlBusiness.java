@@ -10,8 +10,6 @@ public interface UrlBusiness {
 	public void create(Url url) throws UrlBusinessException;
 	
 	public Url create(UrlEntryVO urlVO) throws UrlBusinessException;
-	
-	public List<Url> list() throws UrlBusinessException;
 
 	public List<String> listTop10() throws UrlBusinessException;
 

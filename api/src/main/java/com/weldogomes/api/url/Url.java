@@ -26,7 +26,7 @@ public class Url {
 	private Long id;
 	@NotBlank
 	private String originalUrl;
-	@Column(unique = true)
+	@Column(unique = true, length = 10)
 	private String alias;
 	
 }

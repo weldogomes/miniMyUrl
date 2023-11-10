@@ -47,7 +47,7 @@ public class UrlController {
 	@GetMapping("/a/{alias}")
 	public ResponseEntity<?> acccess(@PathVariable @Valid String alias) {
 		try {
-			return ResponseEntity.ok(urlBusiness.findByAlias(alias).getOriginalUrl());
+			return ResponseEntity.ok(urlBusiness.findOriginalUrlByAlias(alias));
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
